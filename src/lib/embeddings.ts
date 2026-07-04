@@ -1,19 +1,20 @@
 /**
- * Thin wrapper around the Gemini text-embedding-004 REST API.
+ * Thin wrapper around the Gemini gemini-embedding-001 REST API.
+ * (text-embedding-004 was deprecated by Google — this is its replacement.)
  *
  * Endpoint docs:
  * https://ai.google.dev/api/embeddings#method:-models.embedcontent
  *
- * The model produces 768-dimensional vectors, matching the Supabase schema.
+ * outputDimensionality is set to 768 to match the Supabase schema.
  */
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const MODEL = "text-embedding-004";
+const MODEL = "gemini-embedding-001";
 const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:embedContent`;
 const BATCH_DELAY_MS = 200; // pause between calls to respect rate limits
 
 /**
- * Embed a single string using the Gemini text-embedding-004 model.
+ * Embed a single string using the Gemini gemini-embedding-001 model.
  *
  * @throws {Error} if the API call fails or returns an unexpected shape
  */
@@ -31,6 +32,7 @@ export async function embedText(text: string): Promise<number[]> {
     body: JSON.stringify({
       model: `models/${MODEL}`,
       content: { parts: [{ text }] },
+      outputDimensionality: 768,
     }),
   });
 
