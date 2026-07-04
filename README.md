@@ -1,5 +1,11 @@
 # Chat with a Website — RAG Pipeline
 
+**[Live Demo](https://chat-with-website-blue.vercel.app/)**
+
+![Chat with Website Demo](https://i.ibb.co/twWb9RzQ/cww.png)
+# If the response is "Chat failed" it means the gemini api key is exhausted
+
+
 Crawls a website, indexes its content, and answers questions in a chat interface — grounded in the crawled content, with citations back to source pages.
 
 ## Stack
