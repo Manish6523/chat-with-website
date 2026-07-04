@@ -47,6 +47,22 @@ export async function POST(request: NextRequest) {
   let pagesIndexed = 0;
   let chunksCreated = 0;
 
+  // Clear previous site data — this app is "one site at a time"
+  // Delete chunks first (child table), then pages (parent table)
+  const { count: oldChunks } = await supabase
+    .from("chunks")
+    .delete({ count: "exact" })
+    .neq("id", "00000000-0000-0000-0000-000000000000"); // match all rows
+
+  const { count: oldPages } = await supabase
+    .from("pages")
+    .delete({ count: "exact" })
+    .neq("id", "00000000-0000-0000-0000-000000000000");
+
+  console.log(
+    `[api/index] Cleared ${oldChunks ?? 0} old chunk(s) and ${oldPages ?? 0} old page(s)`
+  );
+
   console.log(`[api/index] Starting crawl for: ${url}`);
 
   const pages = await crawlSite(url);
