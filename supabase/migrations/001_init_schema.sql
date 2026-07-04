@@ -1,3 +1,4 @@
+-- only for docs | i will run these directly in sql editor of supabase
 -- adding vector extension in supabase \\ but i already added from the dashboard of supabase
 create extension if not exists vector;
 
