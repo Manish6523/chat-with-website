@@ -1,101 +1,137 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
+import type { ChatMessage } from "@/types/chat";
+import UrlIndexer from "@/components/UrlIndexer";
+import ChatPanel from "@/components/ChatPanel";
+
+//  Component 
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  // URL indexing state
+  const [urlInput, setUrlInput] = useState("");
+  const [isIndexing, setIsIndexing] = useState(false);
+  const [indexResult, setIndexResult] = useState<{
+    pagesIndexed: number;
+    chunksCreated: number;
+  } | null>(null);
+  const [indexError, setIndexError] = useState<string | null>(null);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+  // Chat state
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [questionInput, setQuestionInput] = useState("");
+  const [isThinking, setIsThinking] = useState(false);
+
+  //  Index handler 
+  async function handleIndex() {
+    if (!urlInput.trim()) return;
+
+    setIsIndexing(true);
+    setIndexResult(null);
+    setIndexError(null);
+    setMessages([]);
+
+    try {
+      const res = await fetch("/api/index", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: urlInput.trim() }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setIndexError(data.error ?? "Indexing failed");
+        return;
+      }
+
+      setIndexResult({
+        pagesIndexed: data.pagesIndexed,
+        chunksCreated: data.chunksCreated,
+      });
+    } catch (err) {
+      setIndexError(String(err));
+    } finally {
+      setIsIndexing(false);
+    }
+  }
+
+  //  Chat handler ─
+  async function handleSend() {
+    const q = questionInput.trim();
+    if (!q || isThinking) return;
+
+    setQuestionInput("");
+    setMessages((prev) => [...prev, { role: "user", text: q }]);
+    setIsThinking(true);
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: q }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", text: data.error ?? "Something went wrong." },
+        ]);
+        return;
+      }
+
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", text: data.answer, sources: data.sources },
+      ]);
+    } catch (err) {
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", text: `Error: ${String(err)}` },
+      ]);
+    } finally {
+      setIsThinking(false);
+    }
+  }
+
+  //  Render
+  const siteIndexed = indexResult !== null;
+
+  return (
+    <div className="min-h-screen bg-gray-50 text-gray-900 font-[family-name:var(--font-geist-sans)]">
+      <div className="mx-auto max-w-2xl px-4 py-10 flex flex-col gap-6">
+
+        {/*  Header ─ */}
+        <h1 className="text-2xl font-bold text-center">
+          Chat with a Website
+        </h1>
+        <p className="text-sm text-gray-500 text-center -mt-4">
+          Paste a URL, index it, then ask questions about its content.
+        </p>
+
+        {/*  URL Input */}
+        <UrlIndexer
+          urlInput={urlInput}
+          onUrlChange={setUrlInput}
+          onIndex={handleIndex}
+          isIndexing={isIndexing}
+          indexResult={indexResult}
+          indexError={indexError}
+        />
+
+        {/*  Chat ui ─ */}
+        {siteIndexed && (
+          <ChatPanel
+            messages={messages}
+            isThinking={isThinking}
+            questionInput={questionInput}
+            onQuestionChange={setQuestionInput}
+            onSend={handleSend}
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        )}
+      </div>
     </div>
   );
 }
