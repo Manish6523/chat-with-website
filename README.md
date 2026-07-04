@@ -9,6 +9,7 @@ Next.js 14 (App Router, TypeScript) · Supabase Postgres + pgvector · Gemini `g
 ## How to Run
 
 1. **Install dependencies**
+
    ```bash
    npm install
    ```
@@ -21,10 +22,13 @@ Next.js 14 (App Router, TypeScript) · Supabase Postgres + pgvector · Gemini `g
 3. **Get a free Gemini API key** at [aistudio.google.com/apikey](https://aistudio.google.com/apikey)
 
 4. **Set environment variables**
+
    ```bash
    cp .env.local.example .env.local
    ```
+
    Required vars:
+
    ```
    NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
    SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
@@ -36,6 +40,8 @@ Next.js 14 (App Router, TypeScript) · Supabase Postgres + pgvector · Gemini `g
    npm run dev
    ```
    Open `localhost:3000`, paste a website URL, click **Index Site**, then start chatting.
+
+![Crawl](https://i.ibb.co/N64S9pDk/IMG20260705001201.jpg)
 
 ## Crawling Strategy
 
@@ -53,6 +59,6 @@ Next.js 14 (App Router, TypeScript) · Supabase Postgres + pgvector · Gemini `g
 
 ## Keeping Answers Grounded
 
-- Retrieved chunks are the *only* context given to the model — the prompt explicitly instructs it to answer only from that context and say "I don't have information about that on this site" otherwise
+- Retrieved chunks are the _only_ context given to the model — the prompt explicitly instructs it to answer only from that context and say "I don't have information about that on this site" otherwise
 - Source citations are built from the actual retrieved chunks, not parsed from the model's text, so they're always accurate
 - Verified manually: correct, cited answers on in-scope questions; graceful refusals on off-topic ones
