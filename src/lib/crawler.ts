@@ -29,15 +29,37 @@ const SKIP_EXTENSIONS = new Set([
   ".woff", ".woff2", ".ttf", ".eot",
 ]);
 
-// Selectors for elements to remove from the page before text extraction
+// Selectors for elements to remove from the page before text extraction.
+// removes / covers structural chrome, sidebars, menus, ads, cookie notices, and other noise.
 const NOISE_SELECTORS = [
+  // Structural tags
   "nav", "footer", "header", "script", "style", "noscript", "iframe",
   // Class and ID patterns matching common noise elements (substring matches)
-  '[class*="cookie"]', '[class*="banner"]', '[class*="popup"]',
-  '[class*=" ad-"]', '[class*="ads"]', '[class*="advert"]',
-  '[id*="cookie"]', '[id*="banner"]', '[id*="popup"]',
-  '[id*="ad-"]', '[id*="ads"]', '[id*="advert"]',
+  '[class*="sidebar"]',   '[id*="sidebar"]',
+  '[class*="menu"]',      '[id*="menu"]',
+  '[class*="nav"]',       '[id*="nav"]',
+  '[class*="cookie"]',    '[id*="cookie"]',
+  '[class*="banner"]',    '[id*="banner"]',
+  '[class*="popup"]',     '[id*="popup"]',
+  '[class*="breadcrumb"]','[id*="breadcrumb"]',
+  '[class*="toc"]',       '[id*="toc"]',
+  '[class*="widget"]',    '[id*="widget"]',
+  '[class*="share"]',     '[id*="share"]',
+  '[class*="ad"]',        '[id*="ad"]',
+  '[class*="advert"]',    '[id*="advert"]',
 ].join(", ");
+
+// Selectors tried in priority order to find the main content container.
+// The first match is used; falls back to <body> if none exist.
+const CONTENT_SELECTORS = [
+  "article",
+  "main",
+  "[role='main']",
+  ".content",
+  "#content",
+  ".post-content",
+  ".article-content",
+];
 
 
 function delay(ms: number): Promise<void> {
@@ -132,14 +154,26 @@ function extractContent(
     || $("h1").first().text().trim()
     || "";
 
-  // Strip all noisy elements in-place
+  // Step 1: Strip all boilerplate/noise elements in-place
   $(NOISE_SELECTORS).remove();
 
-  // Collapse whitespace from whatever remains in <body>
-  const cleanText = ($("body").text() || $("*").text())
-    .replace(/\t/g, " ")
-    .replace(/[ ]{2,}/g, " ")
-    .replace(/(\r?\n){2,}/g, "\n")
+  // Step 2: Find the best content container, fall back to <body>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let contentRoot: any = $("body");
+  for (const sel of CONTENT_SELECTORS) {
+    const candidate = $(sel).first();
+    if (candidate.length > 0) {
+      contentRoot = candidate;
+      break;
+    }
+  }
+
+  // Step 3: Extract and normalise whitespace
+  const cleanText = (contentRoot.text() as string)
+    .replace(/\t/g, " ")              // tabs → space
+    .replace(/[ ]{2,}/g, " ")         // runs of spaces → single space
+    .replace(/(\r?\n){3,}/g, "\n\n")  // 3+ newlines → paragraph break
+    .replace(/^[ \t]+|[ \t]+$/gm, "") // trim leading/trailing spaces per line
     .trim();
 
   return { title, cleanText };
